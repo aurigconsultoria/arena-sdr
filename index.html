@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena SDR · Lux Energia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --azul:#1880B8; --ciano:#00A8D0; --indigo:#44489A;
+  --bg:#F4F7FA; --card:#FFFFFF; --tx:#14202B; --tx2:#5A6B7B; --linha:#DDE5EC;
+  --ok:#1E9E6A; --alerta:#D98A1C; --erro:#C8413B; --suave:#EAF3F9;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'Montserrat',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0E151C;--card:#16212B;--tx:#E6EDF3;--tx2:#93A4B4;--linha:#263442;--suave:#1A2C3A}
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+header{background:linear-gradient(90deg,var(--ciano),var(--azul) 45%,var(--indigo));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em}
+header .eyebrow{font-family:var(--mono);font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.1em}
+header .user{margin-left:auto;font-size:12px;display:flex;gap:10px;align-items:center}
+header .user button{background:rgba(255,255,255,.18);border:0;color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer}
+nav{display:flex;gap:4px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--linha);overflow-x:auto}
+nav button{background:none;border:0;padding:12px 14px;cursor:pointer;color:var(--tx2);font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.ativo{color:var(--azul);border-color:var(--azul)}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--linha);border-radius:10px;padding:18px;margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 4px}
+.card .sub{color:var(--tx2);font-size:12px;margin:0 0 14px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.mono{font-family:var(--mono)}
+.muted{color:var(--tx2)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--azul);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--suave);color:var(--azul)}
+.btn.peq{padding:4px 10px;font-size:12px}
+.btn.perigo{background:var(--erro)}
+.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{background:var(--bg);border:1px solid var(--linha);border-radius:7px;padding:7px 9px;width:100%}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:12px;color:var(--tx2);margin-bottom:10px}
+label>input,label>select,label>textarea{margin-top:3px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);font-weight:600;padding:8px;border-bottom:1px solid var(--linha);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--linha);vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+.tbl{overflow-x:auto}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:var(--suave);color:var(--azul)}
+.pill.A{background:#DDF3E8;color:#157A50}.pill.B{background:#FFF1D9;color:#9A6212}.pill.C{background:#EEE;color:#666}
+.pill.no_show,.pill.cancelada{background:#FBE3E1;color:#A1322D}
+.pill.realizada{background:#DDF3E8;color:#157A50}
+/* ranking */
+.podio{display:grid;gap:10px}
+.pos{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--linha);border-radius:10px;background:var(--card)}
+.pos .num{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--tx2);text-align:center}
+.pos.p1{border-color:var(--azul);box-shadow:0 0 0 1px var(--azul) inset}
+.pos.p1 .num{color:var(--azul)}
+.pos .nome{font-weight:700;font-size:15px}
+.pos .pts{font-family:var(--mono);font-size:22px;font-weight:500}
+.pos .pts small{font-size:11px;color:var(--tx2);margin-left:3px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{font-size:11px;color:var(--tx2);background:var(--suave);padding:1px 7px;border-radius:5px;font-family:var(--mono)}
+.barra{height:8px;background:var(--suave);border-radius:99px;overflow:hidden;margin:4px 0 10px}
+.barra i{display:block;height:100%;background:var(--azul);border-radius:99px}
+.barra i.ok{background:var(--ok)}
+.meta-lin{display:flex;justify-content:space-between;font-size:12px}
+.kpi{font-family:var(--mono);font-size:26px;font-weight:500}
+.kpi-l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2)}
+.aviso{padding:10px 12px;border-radius:8px;background:var(--suave);font-size:13px;margin-bottom:12px}
+.aviso.erro{background:#FBE3E1;color:#8A2A26}
+.at{border-left:4px solid var(--linha);padding:8px 12px;margin-bottom:8px;background:var(--bg);border-radius:0 8px 8px 0}
+.at.atencao{border-color:var(--alerta)}.at.pendencia{border-color:var(--azul)}.at.destaque{border-color:var(--ok)}.at.sistema{border-color:var(--erro)}
+.at b{display:block;font-size:13px}
+.at span{font-size:12px;color:var(--tx2)}
+.subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.subnav button{background:var(--card);border:1px solid var(--linha);border-radius:99px;padding:6px 14px;cursor:pointer;font-weight:600;color:var(--tx2)}
+.subnav button.ativo{background:var(--azul);color:#fff;border-color:var(--azul)}
+.login{max-width:380px;margin:70px auto}
+.oculto{display:none!important}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#14202B;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:99;max-width:90vw}
+.modal-fundo{position:fixed;inset:0;background:rgba(10,20,30,.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+.modal{background:var(--card);border-radius:12px;padding:20px;max-width:640px;width:100%}
+.legenda{font-size:12px;color:var(--tx2);line-height:1.6}
+.legenda b{color:var(--tx)}
+svg text{font-family:var(--mono);font-size:10px;fill:var(--tx2)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ===================== CONFIG =====================
+const SUPABASE_URL = "https://fctmquzdqifzkirnzykw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_15Ad6aVoUIQeDEbSdpzn9g_3MQSZB9y";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const QUAL = {
+  A: "Quente · decisor presente, dor clara, fatura enviada ou prometida, próximo passo marcado",
+  B: "Morna · interesse real, mas falta decisor, fatura ou timing (> 3 meses)",
+  C: "Fria · fora do perfil (consumo/tensão), sem interesse ou só curiosidade",
+};
+const STATUS = { agendada:"Agendada", realizada:"Realizada", no_show:"No-show", remarcada:"Remarcada", cancelada:"Cancelada" };
+const CAT = {
+  ligacao:"ligações", conversa:"conversas", reuniao_agendada:"agendadas", reuniao_realizada:"realizadas",
+  qualidade_A:"A", qualidade_B:"B", qualidade_C:"C", no_show:"no-show", fatura_recebida:"faturas",
+  fechamento:"fechamentos", meta_ligacoes_semana:"meta lig.", meta_conectadas_semana:"meta conv.",
+  meta_reunioes_semana:"meta reu.", ajuste:"ajustes"
+};
+
+// ===================== ESTADO =====================
+const S = { user:null, perfil:null, aba:"arena", subAdmin:"coaching", periodo:"semana", sdrs:[], temporadas:[], ini:null, fim:null };
+
+// ===================== UTIL =====================
+const $ = (s, el=document) => el.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hojeSP = () => new Date(new Date().toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const fmtData = (s) => s ? new Date(s).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
+const fmtDia = (s) => s ? s.split("-").reverse().slice(0,2).join("/") : "—";
+const fmtSeg = (s) => s==null ? "—" : `${Math.floor(s/60)}m${String(Math.round(s%60)).padStart(2,"0")}s`;
+const pct = (v) => v==null ? "—" : `${String(v).replace(".",",")}%`;
+const n = (v) => (v ?? 0).toLocaleString("pt-BR");
+function toast(msg, ms=3200){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), ms); }
+async function rpc(nome, args={}){ const {data,error}=await sb.rpc(nome,args); if(error){ toast(error.message); throw error; } return data; }
+async function q(prom){ const {data,error}=await prom; if(error){ toast(error.message); throw error; } return data; }
+const gestor = () => S.perfil?.papel === "gestor";
+const nomeSdr = (id) => S.sdrs.find(s=>s.id===id)?.nome || "—";
+
+function periodo(tipo){
+  const h = hojeSP(); let ini, fim = iso(h);
+  if (tipo==="semana"){ const d=new Date(h); const dw=(d.getDay()+6)%7; d.setDate(d.getDate()-dw); ini=iso(d); }
+  else if (tipo==="semana_passada"){ const d=new Date(h); const dw=(d.getDay()+6)%7; d.setDate(d.getDate()-dw-7); ini=iso(d); const f=new Date(d); f.setDate(f.getDate()+6); fim=iso(f); }
+  else if (tipo==="mes"){ ini = iso(new Date(h.getFullYear(), h.getMonth(), 1)); }
+  else if (tipo==="mes_passado"){ ini = iso(new Date(h.getFullYear(), h.getMonth()-1, 1)); fim = iso(new Date(h.getFullYear(), h.getMonth(), 0)); }
+  else if (tipo==="total"){ ini = "2024-01-01"; }
+  else if (tipo.startsWith("temp:")){ const t=S.temporadas.find(x=>x.id===tipo.slice(5)); ini=t.inicio; fim=t.fim; }
+  else if (tipo==="custom"){ ini=S.ini; fim=S.fim; }
+  return { ini, fim };
+}
+function seletorPeriodo(){
+  const opts = [["semana","Esta semana"],["semana_passada","Semana passada"],["mes","Este mês"],["mes_passado","Mês passado"],["total","Total"],
+    ...S.temporadas.map(t=>[`temp:${t.id}`, t.nome]), ["custom","Personalizado"]];
+  const p = periodo(S.periodo);
+  return `<div class="row" style="margin-bottom:14px">
+    <select id="selPer" style="width:auto">${opts.map(([v,l])=>`<option value="${v}" ${S.periodo===v?"selected":""}>${esc(l)}</option>`).join("")}</select>
+    <span class="${S.periodo==="custom"?"":"oculto"} row"><input type="date" id="pIni" value="${p.ini||""}" style="width:auto"> <input type="date" id="pFim" value="${p.fim||""}" style="width:auto"></span>
+    <span class="mono muted" style="font-size:12px">${fmtDia(p.ini)} → ${fmtDia(p.fim)}</span></div>`;
+}
+function ligarSeletor(){
+  $("#selPer")?.addEventListener("change", e=>{ S.periodo=e.target.value; if(S.periodo==="custom"){ const p=periodo("semana"); S.ini=S.ini||p.ini; S.fim=S.fim||p.fim; } render(); });
+  $("#pIni")?.addEventListener("change", e=>{ S.ini=e.target.value; render(); });
+  $("#pFim")?.addEventListener("change", e=>{ S.fim=e.target.value; render(); });
+}
+function modal(html, onMount){
+  const f=document.createElement("div"); f.className="modal-fundo"; f.innerHTML=`<div class="modal">${html}</div>`;
+  f.addEventListener("click", e=>{ if(e.target===f) f.remove(); });
+  document.body.appendChild(f); onMount && onMount(f, ()=>f.remove()); return f;
+}
+
+// ===================== AUTH =====================
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  S.user = session?.user || null;
+  sb.auth.onAuthStateChange((_e, sess)=>{ const mudou=(sess?.user?.id)!==(S.user?.id); S.user=sess?.user||null; if(mudou) carregar(); });
+  carregar();
+}
+async function carregar(){
+  if(!S.user){ return telaLogin(); }
+  const { data:perfil } = await sb.from("perfis").select("*").eq("user_id", S.user.id).maybeSingle();
+  S.perfil = perfil;
+  if(!perfil || perfil.papel==="pendente"){
+    $("#app").innerHTML = `<div class="login card"><h2>Acesso aguardando liberação</h2>
+      <p class="muted">Sua conta (${esc(S.user.email)}) foi criada. Peça ao gestor para cadastrar este e-mail no time.</p>
+      <button class="btn sec" id="sair">Sair</button></div>`;
+    $("#sair").onclick = ()=>sb.auth.signOut(); return;
+  }
+  S.sdrs = await q(sb.from("sdrs").select("*").order("nome"));
+  S.temporadas = await q(sb.from("temporadas").select("*").order("inicio",{ascending:false}));
+  render();
+}
+function telaLogin(modo="entrar"){
+  $("#app").innerHTML = `<div class="login card">
+    <div class="eyebrow mono muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em">Lux Energia · Time comercial</div>
+    <h2 style="font-size:22px;margin:4px 0 16px">Arena SDR</h2>
+    <label>E-mail<input id="lEmail" type="email" autocomplete="email"></label>
+    <label>Senha<input id="lSenha" type="password" autocomplete="${modo==="entrar"?"current-password":"new-password"}"></label>
+    <div class="row"><button class="btn" id="lOk">${modo==="entrar"?"Entrar":"Criar conta"}</button>
+    <button class="btn sec" id="lTroca">${modo==="entrar"?"Criar conta":"Já tenho conta"}</button></div>
+    <p><a href="#" id="lEsq" class="muted" style="font-size:12px">Esqueci a senha</a></p></div>`;
+  $("#lTroca").onclick = ()=>telaLogin(modo==="entrar"?"criar":"entrar");
+  $("#lEsq").onclick = async (e)=>{ e.preventDefault(); const em=$("#lEmail").value.trim(); if(!em) return toast("Preencha o e-mail.");
+    await sb.auth.resetPasswordForEmail(em,{redirectTo:location.href.split("#")[0]}); toast("Se o e-mail existir, o link de redefinição foi enviado."); };
+  $("#lOk").onclick = async ()=>{
+    const email=$("#lEmail").value.trim(), password=$("#lSenha").value;
+    if(modo==="entrar"){ const {error}=await sb.auth.signInWithPassword({email,password}); if(error) toast(error.message==="Invalid login credentials"?"E-mail ou senha incorretos.":error.message); }
+    else { const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.href.split("#")[0]}}); if(error) return toast(error.message);
+      if(!data.session) toast("Conta criada. Confirme pelo link enviado ao seu e-mail.", 6000); }
+  };
+}
+// fluxo de redefinição de senha
+sb.auth.onAuthStateChange(async (ev)=>{ if(ev==="PASSWORD_RECOVERY"){ const nova=prompt("Digite a nova senha:"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?error.message:"Senha atualizada."); } } });
+
+// ===================== LAYOUT =====================
+function render(){
+  const abas = [["arena","Arena"],["reunioes","Reuniões"],["metricas", gestor()?"Métricas":"Meus números"]];
+  if(gestor()) abas.push(["admin","Admin"]);
+  $("#app").innerHTML = `<header><div><div class="eyebrow">Lux Energia · Time comercial</div><h1>Arena SDR</h1></div>
+    <div class="user"><span>${esc(S.perfil.nome||S.user.email)}${gestor()?" · gestor":""}</span><button id="sair">Sair</button></div></header>
+    <nav>${abas.map(([k,l])=>`<button data-aba="${k}" class="${S.aba===k?"ativo":""}">${l}</button>`).join("")}</nav>
+    <main id="conteudo"><p class="muted">Carregando…</p></main>`;
+  $("#sair").onclick = ()=>sb.auth.signOut();
+  document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ S.aba=b.dataset.aba; render(); });
+  ({arena:telaArena, reunioes:telaReunioes, metricas:telaMetricas, admin:telaAdmin}[S.aba] || telaArena)();
+}
+
+// ===================== ARENA =====================
+async function telaArena(){
+  const temp = S.temporadas.find(t => t.inicio <= iso(hojeSP()) && t.fim >= iso(hojeSP())) || S.temporadas[0];
+  if(!S.periodo || S.periodo==="semana" && !S._arenaInit && temp){ S.periodo = `temp:${temp.id}`; S._arenaInit = true; }
+  const p = periodo(S.periodo);
+  const [rank, painel, regras] = await Promise.all([ rpc("ranking",{p_inicio:p.ini,p_fim:p.fim}), rpc("painel_time"), q(sb.from("regras_pontos").select("*").eq("ativa",true).order("ordem")) ]);
+  const tempAtual = S.periodo.startsWith("temp:") ? S.temporadas.find(t=>t.id===S.periodo.slice(5)) : null;
+  const diasFim = tempAtual ? Math.ceil((new Date(tempAtual.fim+"T23:59:59-03:00") - new Date())/86400000) : null;
+  $("#conteudo").innerHTML = `
+    ${seletorPeriodo()}
+    <div class="grid g2">
+      <div>
+        ${tempAtual ? `<div class="card"><div class="row" style="justify-content:space-between"><div><h2>${esc(tempAtual.nome)}</h2>
+          <p class="sub mono">${fmtDia(tempAtual.inicio)} → ${fmtDia(tempAtual.fim)} ${diasFim>0?`· faltam ${diasFim} dias`:diasFim>-1?"· último dia":"· encerrada"}</p></div></div>
+          <div class="grid g3" style="gap:8px">
+            ${[["1º",tempAtual.premio_1],["2º",tempAtual.premio_2],["3º",tempAtual.premio_3]].filter(x=>x[1]).map(([l,pr])=>`<div class="aviso" style="margin:0"><span class="mono muted">${l}</span> · <b>${esc(pr)}</b></div>`).join("")}
+          </div>${tempAtual.regras?`<p class="legenda" style="margin:10px 0 0">${esc(tempAtual.regras)}</p>`:""}</div>`:""}
+        <div class="podio">${rank.map((r,i)=>`<div class="pos p${i+1}"><div class="num">${i+1}º</div>
+          <div><div class="nome"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(r.cor)};margin-right:6px"></span>${esc(r.nome)}</div>
+          <div class="chips">${Object.entries(r.detalhe||{}).filter(([,v])=>v.p!==0).sort((a,b)=>b[1].p-a[1].p).map(([k,v])=>`<span class="chip" title="${v.p} pts">${n(v.q)} ${esc(CAT[k]||k)}</span>`).join("")}</div></div>
+          <div class="pts">${n(r.pontos)}<small>pts</small></div></div>`).join("") || `<p class="muted">Nenhum SDR ativo.</p>`}</div>
+      </div>
+      <div>
+        <div class="card"><h2>Metas da semana</h2><p class="sub">Progresso de segunda até hoje. Atualiza a cada 15 min com o GoTo.</p>
+          ${painel.map(p=>`<div style="margin-bottom:14px"><b>${esc(p.nome)}</b>
+            ${barraMeta("Ligações",p.lig_semana,p.meta_lig)}${barraMeta("Conversas",p.conv_semana,p.meta_conv)}${barraMeta("Reuniões",p.agend_semana,p.meta_reu)}
+            <div class="chips"><span class="chip">mês: ${n(p.agend_mes)} reuniões</span><span class="chip">total: ${n(p.agend_total)} reuniões</span></div></div>`).join("")}
+        </div>
+        <div class="card"><h2>Como pontuar</h2><p class="sub">Reunião vale muito mais que ligação — e reunião boa vale mais ainda.</p>
+          <table>${regras.map(r=>`<tr><td>${esc(r.descricao)}</td><td class="n" style="color:${r.pontos<0?"var(--erro)":"inherit"}">${r.pontos>0?"+":""}${r.pontos}</td></tr>`).join("")}</table></div>
+      </div>
+    </div>`;
+  ligarSeletor();
+}
+function barraMeta(rot, v, meta){
+  const p = meta ? Math.min(100, Math.round(100*v/meta)) : 0;
+  return `<div class="meta-lin"><span class="muted">${rot}</span><span class="mono">${n(v)}${meta?` / ${n(meta)}`:""}</span></div><div class="barra"><i class="${p>=100?"ok":""}" style="width:${p}%"></i></div>`;
+}
+
+// ===================== REUNIÕES =====================
+async function telaReunioes(){
+  const p = periodo(S.periodo==="semana"||S.periodo.startsWith("temp:")?S.periodo:S.periodo);
+  let qy = sb.from("reunioes").select("*").gte("agendada_em", p.ini+"T00:00:00-03:00").lte("agendada_em", p.fim+"T23:59:59-03:00").order("agendada_em",{ascending:false});
+  const filtroSdr = S.filtroSdr || "";
+  if(filtroSdr) qy = qy.eq("sdr_id", filtroSdr);
+  const lista = await q(qy);
+  const podeRegistrar = gestor() || S.perfil.sdr_id;
+  $("#conteudo").innerHTML = `
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <div>${seletorPeriodo()}</div>
+      ${podeRegistrar?`<button class="btn" id="nova">+ Registrar reunião agendada</button>`:""}
+    </div>
+    ${gestor()?`<div class="row" style="margin-bottom:12px"><select id="fSdr" style="width:auto"><option value="">Todos os SDRs</option>${S.sdrs.map(s=>`<option value="${s.id}" ${filtroSdr===s.id?"selected":""}>${esc(s.nome)}</option>`).join("")}</select>
+      <span class="muted" style="font-size:12px">Clique em uma reunião para classificar depois que ela acontecer.</span></div>`:""}
+    <div class="card tbl"><table><thead><tr><th>Agendada</th>${gestor()?"<th>SDR</th>":""}<th>Empresa</th><th>Contato</th><th>Reunião</th><th>Status</th><th>Qual.</th><th>Fatura</th><th>Fechou</th></tr></thead>
+    <tbody>${lista.map(r=>`<tr data-id="${r.id}" style="cursor:pointer">
+      <td class="mono">${fmtData(r.agendada_em)}</td>${gestor()?`<td>${esc(nomeSdr(r.sdr_id))}</td>`:""}
+      <td><b>${esc(r.empresa)}</b>${r.distribuidora?`<div class="muted" style="font-size:11px">${esc(r.distribuidora)}${r.consumo_mensal?" · "+esc(r.consumo_mensal):""}</div>`:""}</td>
+      <td>${esc(r.contato||"")}${r.cargo_contato?`<div class="muted" style="font-size:11px">${esc(r.cargo_contato)}</div>`:""}</td>
+      <td class="mono">${fmtData(r.data_reuniao)}</td>
+      <td><span class="pill ${r.status}">${STATUS[r.status]}</span></td>
+      <td>${r.qualidade?`<span class="pill ${r.qualidade}">${r.qualidade}</span>`:"—"}</td>
+      <td>${r.fatura_recebida?"sim":"—"}</td><td>${r.fechou?"<b style='color:var(--ok)'>sim</b>":"—"}</td></tr>
+      ${r.feedback_gestor?`<tr><td></td><td colspan="${gestor()?8:7}" class="muted" style="font-size:12px;padding-top:0">Feedback: ${esc(r.feedback_gestor)}</td></tr>`:""}`).join("") || `<tr><td colspan="9" class="muted">Nenhuma reunião no período.</td></tr>`}</tbody></table></div>`;
+  ligarSeletor();
+  $("#fSdr")?.addEventListener("change", e=>{ S.filtroSdr=e.target.value; render(); });
+  $("#nova")?.addEventListener("click", ()=>formReuniao());
+  document.querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>formReuniao(lista.find(x=>x.id===tr.dataset.id)));
+}
+function formReuniao(r=null){
+  const g = gestor(), novo = !r;
+  const v = r || { status:"agendada" };
+  const dtLocal = (s)=>{ if(!s) return ""; const d=new Date(new Date(s).toLocaleString("en-US",{timeZone:"America/Sao_Paulo"}));
+    return `${iso(d)}T${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+  modal(`<h2 style="margin-top:0">${novo?"Registrar reunião agendada":esc(v.empresa)}</h2>
+    <div class="form">
+      ${g?`<label>SDR<select id="fSdrR">${S.sdrs.filter(s=>s.ativo).map(s=>`<option value="${s.id}" ${v.sdr_id===s.id?"selected":""}>${esc(s.nome)}</option>`).join("")}</select></label>`:""}
+      <label>Empresa *<input id="fEmp" value="${esc(v.empresa)}"></label>
+      <label>Contato<input id="fCont" value="${esc(v.contato)}"></label>
+      <label>Cargo do contato<input id="fCargo" value="${esc(v.cargo_contato)}" placeholder="ex.: diretor financeiro"></label>
+      <label>Telefone<input id="fTel" value="${esc(v.telefone)}"></label>
+      <label>Distribuidora<input id="fDist" value="${esc(v.distribuidora)}" placeholder="ex.: ENEL SP"></label>
+      <label>Consumo / conta mensal<input id="fCons" value="${esc(v.consumo_mensal)}" placeholder="ex.: R$ 80 mil · A4"></label>
+      <label>Data e hora da reunião<input id="fData" type="datetime-local" value="${dtLocal(v.data_reuniao)}"></label>
+      <label>Executivo responsável<input id="fExec" value="${esc(v.executivo)}"></label>
+      <label>Status<select id="fStatus">${Object.entries(STATUS).filter(([k])=>g||["agendada","remarcada","cancelada"].includes(k)).map(([k,l])=>`<option value="${k}" ${v.status===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="row" style="margin-top:22px"><input type="checkbox" id="fFat" style="width:auto" ${v.fatura_recebida?"checked":""}> Fatura recebida</label>
+    </div>
+    <label>Observações do SDR<textarea id="fObs" placeholder="dor, contexto, objeções…">${esc(v.observacoes)}</textarea></label>
+    ${g && !novo ? `<div class="card" style="background:var(--bg)"><h2>Classificação do gestor</h2><p class="sub">Use depois que a reunião acontecer.</p>
+      <div class="form">
+        <label>Qualidade<select id="fQual"><option value="">—</option>${Object.keys(QUAL).map(k=>`<option value="${k}" ${v.qualidade===k?"selected":""}>${k}</option>`).join("")}</select></label>
+        <label class="row" style="margin-top:22px"><input type="checkbox" id="fProp" style="width:auto" ${v.proposta_enviada?"checked":""}> Proposta enviada</label>
+        <label class="row" style="margin-top:22px"><input type="checkbox" id="fFech" style="width:auto" ${v.fechou?"checked":""}> Fechou contrato</label>
+      </div>
+      <div class="legenda">${Object.entries(QUAL).map(([k,d])=>`<div><b>${k}</b> — ${esc(d)}</div>`).join("")}</div>
+      <label style="margin-top:10px">Feedback para o SDR (ele vê)<textarea id="fFb" placeholder="O que funcionou, o que ajustar na próxima">${esc(v.feedback_gestor)}</textarea></label></div>`:""}
+    ${!g && !novo && v.qualidade ? `<div class="aviso">Classificação: <b>${v.qualidade}</b> — ${esc(QUAL[v.qualidade])}${v.feedback_gestor?`<br>Feedback: ${esc(v.feedback_gestor)}`:""}</div>`:""}
+    <div class="row"><button class="btn" id="fSalvar">Salvar</button><button class="btn sec" id="fCanc">Cancelar</button>
+    ${g && !novo?`<button class="btn perigo peq" id="fDel" style="margin-left:auto">Excluir</button>`:""}</div>`,
+  (el, fechar)=>{
+    $("#fCanc",el).onclick = fechar;
+    $("#fDel",el)?.addEventListener("click", async ()=>{ if(!confirm("Excluir esta reunião?")) return; await q(sb.from("reunioes").delete().eq("id",r.id)); fechar(); render(); });
+    $("#fSalvar",el).onclick = async ()=>{
+      const emp = $("#fEmp",el).value.trim(); if(!emp) return toast("Informe a empresa.");
+      const d = $("#fData",el).value;
+      const row = { empresa:emp, contato:$("#fCont",el).value||null, cargo_contato:$("#fCargo",el).value||null, telefone:$("#fTel",el).value||null,
+        distribuidora:$("#fDist",el).value||null, consumo_mensal:$("#fCons",el).value||null, executivo:$("#fExec",el).value||null,
+        data_reuniao: d ? new Date(d+":00-03:00").toISOString() : null, status:$("#fStatus",el).value, fatura_recebida:$("#fFat",el).checked, observacoes:$("#fObs",el).value||null };
+      if(g){ row.sdr_id = $("#fSdrR",el).value;
+        if(!novo){ row.qualidade=$("#fQual",el).value||null; row.proposta_enviada=$("#fProp",el).checked; row.fechou=$("#fFech",el).checked; row.feedback_gestor=$("#fFb",el).value||null;
+          if(!row.fechou) row.data_fechamento=null; } }
+      if(novo) await q(sb.from("reunioes").insert(row)); else await q(sb.from("reunioes").update(row).eq("id",r.id));
+      toast(novo?"Reunião registrada. +pontos!":"Salvo."); fechar(); render();
+    };
+  });
+}
+
+// ===================== MÉTRICAS =====================
+async function telaMetricas(){
+  const p = periodo(S.periodo);
+  const ps = periodo("semana"), pm = periodo("mes"), pt = periodo("total");
+  const [m, serie, mS, mM, mT] = await Promise.all([
+    rpc("metricas",{p_inicio:p.ini,p_fim:p.fim}), rpc("serie_diaria",{p_inicio:p.ini,p_fim:p.fim}),
+    rpc("metricas",{p_inicio:ps.ini,p_fim:ps.fim}), rpc("metricas",{p_inicio:pm.ini,p_fim:pm.fim}), rpc("metricas",{p_inicio:pt.ini,p_fim:pt.fim}) ]);
+  const linhas = [
+    ["Ligações realizadas","ligacoes",n],["Conversas efetivas","conectadas",n],["Taxa de conexão","taxa_conexao",pct],
+    ["Tempo médio de conversa","tempo_medio_conversa_s",fmtSeg],["Tempo total falando","tempo_total_conversa_s",fmtSeg],
+    ["Reuniões agendadas","agendadas",n],["Agendamento / conversa","taxa_agendamento",pct],["Agendamentos a cada 100 ligações","agendamentos_por_100",v=>v==null?"—":String(v).replace(".",",")],
+    ["Realizadas","realizadas",n],["No-show","no_show",n],["Comparecimento","show_rate",pct],
+    ["Qualidade A","qual_a",n],["Qualidade B","qual_b",n],["Qualidade C","qual_c",n],["Faturas recebidas","faturas",n],
+    ["Fechamentos","fechamentos",n],["Fechamento / agendamento","taxa_fechamento",pct]];
+  $("#conteudo").innerHTML = `${seletorPeriodo()}
+    <div class="card tbl"><h2>Funil por SDR</h2><p class="sub">Ligação conta a partir de 10s; conversa efetiva a partir de 60s atendida (ajustável em Admin · Regras).</p>
+      <table><thead><tr><th></th>${m.map(x=>`<th class="n">${esc(x.nome)}</th>`).join("")}${m.length>1?`<th class="n">Time</th>`:""}</tr></thead>
+      <tbody>${linhas.map(([rot,k,f])=>`<tr><td>${rot}</td>${m.map(x=>`<td class="n">${f(x[k])}</td>`).join("")}${m.length>1?`<td class="n muted">${totalTime(m,k,f)}</td>`:""}</tr>`).join("")}</tbody></table></div>
+    <div class="grid g2">
+      <div class="card"><h2>Ligações por dia</h2><p class="sub">Ligações de saída acima do tempo mínimo.</p>${grafico(serie,"ligacoes")}</div>
+      <div class="card"><h2>Reuniões agendadas por dia</h2><p class="sub">&nbsp;</p>${grafico(serie,"agendadas")}</div>
+    </div>
+    <div class="card tbl"><h2>Taxa de agendamento</h2><p class="sub">Reuniões agendadas ÷ conversas efetivas, na semana, no mês e no acumulado.</p>
+      <table><thead><tr><th>SDR</th><th class="n">Semana</th><th class="n">Mês</th><th class="n">Total</th><th class="n">Fech./agend. total</th></tr></thead>
+      <tbody>${mT.map(x=>{ const s=mS.find(y=>y.sdr_id===x.sdr_id)||{}, mm=mM.find(y=>y.sdr_id===x.sdr_id)||{};
+        return `<tr><td>${esc(x.nome)}</td><td class="n">${pct(s.taxa_agendamento)} <span class="muted">(${n(s.agendadas)})</span></td><td class="n">${pct(mm.taxa_agendamento)} <span class="muted">(${n(mm.agendadas)})</span></td><td class="n">${pct(x.taxa_agendamento)} <span class="muted">(${n(x.agendadas)})</span></td><td class="n">${pct(x.taxa_fechamento)}</td></tr>`; }).join("")}</tbody></table></div>`;
+  ligarSeletor();
+}
+function totalTime(m,k,f){
+  const soma = (c)=>m.reduce((a,x)=>a+Number(x[c]||0),0);
+  const r = (a,b,mult=100,d=1)=> b ? Math.round(mult*a/b*10**d)/10**d : null;
+  const deriv = { taxa_conexao:()=>r(soma("conectadas"),soma("ligacoes")), taxa_agendamento:()=>r(soma("agendadas"),soma("conectadas")),
+    agendamentos_por_100:()=>r(soma("agendadas"),soma("ligacoes"),100,2), show_rate:()=>r(soma("realizadas"),soma("realizadas")+soma("no_show")),
+    taxa_fechamento:()=>r(soma("fechamentos"),soma("agendadas")),
+    tempo_medio_conversa_s:()=>soma("conectadas")?Math.round(m.reduce((a,x)=>a+Number(x.tempo_medio_conversa_s||0)*Number(x.conectadas||0),0)/soma("conectadas")):null };
+  return f(deriv[k] ? deriv[k]() : soma(k));
+}
+function grafico(serie, campo){
+  const dias = [...new Set(serie.map(s=>s.dia))].sort();
+  if(!dias.length) return `<p class="muted">Sem dados.</p>`;
+  const sdrs = [...new Set(serie.map(s=>s.sdr_id))];
+  const max = Math.max(1, ...dias.map(d=>serie.filter(s=>s.dia===d).reduce((a,s)=>a+Number(s[campo]),0)));
+  const W=560,H=180,pad=24, bw=(W-pad)/dias.length;
+  let barras="";
+  dias.forEach((d,i)=>{ let y=H-pad;
+    sdrs.forEach(id=>{ const v=Number(serie.find(s=>s.dia===d&&s.sdr_id===id)?.[campo]||0); const h=(H-pad-8)*v/max;
+      if(h>0){ y-=h; barras+=`<rect x="${pad+i*bw+2}" y="${y}" width="${Math.max(2,bw-4)}" height="${h}" fill="${esc(S.sdrs.find(s=>s.id===id)?.cor||"#1880B8")}" rx="2"><title>${esc(nomeSdr(id))} · ${fmtDia(d)}: ${v}</title></rect>`; } });
+    if(dias.length<=16 || i%Math.ceil(dias.length/12)===0) barras+=`<text x="${pad+i*bw+bw/2}" y="${H-8}" text-anchor="middle">${fmtDia(d)}</text>`; });
+  const leg = sdrs.map(id=>`<span class="row" style="gap:4px;font-size:12px"><i style="width:9px;height:9px;border-radius:2px;background:${esc(S.sdrs.find(s=>s.id===id)?.cor)}"></i>${esc(nomeSdr(id))}</span>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img"><text x="0" y="12">${max}</text><line x1="${pad}" x2="${W}" y1="${H-pad}" y2="${H-pad}" stroke="var(--linha)"/>${barras}</svg><div class="row" style="gap:12px">${leg}</div>`;
+}
+
+// ===================== ADMIN =====================
+async function telaAdmin(){
+  const subs = [["coaching","Coaching"],["time","Time"],["metas","Metas"],["temporadas","Temporadas e prêmios"],["regras","Regras de pontos"],["ajustes","Ajustes de pontos"],["goto","Integração GoTo"],["usuarios","Acessos"]];
+  $("#conteudo").innerHTML = `<div class="subnav">${subs.map(([k,l])=>`<button data-sub="${k}" class="${S.subAdmin===k?"ativo":""}">${l}</button>`).join("")}</div><div id="adm"></div>`;
+  document.querySelectorAll(".subnav button").forEach(b=>b.onclick=()=>{ S.subAdmin=b.dataset.sub; telaAdmin(); });
+  await ({coaching:admCoaching,time:admTime,metas:admMetas,temporadas:admTemporadas,regras:admRegras,ajustes:admAjustes,goto:admGoto,usuarios:admUsuarios}[S.subAdmin])();
+}
+
+async function admCoaching(){
+  const [at, fbs, reunFb] = await Promise.all([
+    rpc("pontos_atencao"),
+    q(sb.from("feedbacks").select("*").order("data",{ascending:false}).limit(60)),
+    q(sb.from("reunioes").select("id,sdr_id,empresa,qualidade,feedback_gestor,classificada_em").not("feedback_gestor","is",null).order("classificada_em",{ascending:false}).limit(15)) ]);
+  const ordem = {sistema:0,pendencia:1,atencao:2,destaque:3};
+  at.sort((a,b)=>ordem[a.nivel]-ordem[b.nivel]);
+  const rot = {sistema:"Sistema",pendencia:"Pendência sua",atencao:"Vale uma conversa",destaque:"Reconhecer"};
+  $("#adm").innerHTML = `<div class="grid g2">
+    <div class="card"><h2>Pontos de atenção</h2>
+      <p class="sub">Leitura semanal e agregada — sem acompanhar ligação por ligação. Aparece só o que pede uma ação ou um reconhecimento.</p>
+      ${at.length ? at.map(a=>`<div class="at ${a.nivel}"><span class="mono" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em">${rot[a.nivel]}${a.nome?" · "+esc(a.nome):""}</span><b>${esc(a.titulo)}</b><span>${esc(a.detalhe)}</span></div>`).join("")
+        : `<div class="aviso">Nada pedindo atenção agora. Time rodando.</div>`}
+    </div>
+    <div class="card"><h2>Registrar feedback / combinado</h2><p class="sub">Anotações de 1:1. Marque "compartilhar" para o SDR ver em "Meus números".</p>
+      <div class="form"><label>SDR<select id="fbSdr">${S.sdrs.filter(s=>s.ativo).map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join("")}</select></label>
+      <label>Tipo<select id="fbTipo"><option value="elogio">Elogio</option><option value="ajuste">Ponto de ajuste</option><option value="combinado">Combinado (com prazo)</option></select></label></div>
+      <label>Texto<textarea id="fbTxt" placeholder="ex.: abertura da ligação está ótima; próximo passo é pedir a fatura já na primeira conversa"></textarea></label>
+      <div class="row"><label class="row" style="margin:0"><input type="checkbox" id="fbComp" checked style="width:auto"> Compartilhar com o SDR</label><button class="btn" id="fbOk" style="margin-left:auto">Salvar</button></div>
+    </div></div>
+    <div class="grid g2">
+    <div class="card"><h2>Histórico de feedbacks</h2>
+      <div class="row" style="margin-bottom:10px"><select id="fbFiltro" style="width:auto"><option value="">Todos</option>${S.sdrs.map(s=>`<option value="${s.id}" ${S.fbFiltro===s.id?"selected":""}>${esc(s.nome)}</option>`).join("")}</select></div>
+      ${fbs.filter(f=>!S.fbFiltro||f.sdr_id===S.fbFiltro).map(f=>`<div class="at ${f.tipo==="elogio"?"destaque":f.tipo==="ajuste"?"atencao":"pendencia"}">
+        <span class="mono" style="font-size:10px;text-transform:uppercase">${fmtDia(f.data)} · ${esc(nomeSdr(f.sdr_id))} · ${f.tipo}${f.compartilhado?"":" · privado"}</span>
+        <b style="font-weight:500">${esc(f.texto)}</b>
+        ${f.tipo==="combinado"?`<label class="row" style="margin:4px 0 0"><input type="checkbox" data-conc="${f.id}" ${f.concluido?"checked":""} style="width:auto"> concluído</label>`:""}
+        <a href="#" data-delfb="${f.id}" class="muted" style="font-size:11px">excluir</a></div>`).join("") || `<p class="muted">Nenhum feedback ainda.</p>`}
+    </div>
+    <div class="card"><h2>Feedbacks dados nas reuniões</h2><p class="sub">Os últimos comentários deixados ao classificar reuniões.</p>
+      ${reunFb.map(r=>`<div class="at"><span class="mono" style="font-size:10px">${esc(nomeSdr(r.sdr_id))} · ${esc(r.empresa)} ${r.qualidade?"· "+r.qualidade:""}</span><b style="font-weight:500">${esc(r.feedback_gestor)}</b></div>`).join("") || `<p class="muted">Nenhum ainda.</p>`}
+    </div></div>`;
+  $("#fbOk").onclick = async ()=>{ const t=$("#fbTxt").value.trim(); if(!t) return;
+    await q(sb.from("feedbacks").insert({sdr_id:$("#fbSdr").value,tipo:$("#fbTipo").value,texto:t,compartilhado:$("#fbComp").checked})); toast("Registrado."); admCoaching(); };
+  $("#fbFiltro").onchange = e=>{ S.fbFiltro=e.target.value; admCoaching(); };
+  document.querySelectorAll("[data-conc]").forEach(c=>c.onchange=async()=>{ await q(sb.from("feedbacks").update({concluido:c.checked}).eq("id",c.dataset.conc)); });
+  document.querySelectorAll("[data-delfb]").forEach(a=>a.onclick=async(e)=>{ e.preventDefault(); if(!confirm("Excluir?")) return; await q(sb.from("feedbacks").delete().eq("id",a.dataset.delfb)); admCoaching(); });
+}
+
+async function admTime(){
+  const [sdrs, linhas] = await Promise.all([ q(sb.from("sdrs").select("*").order("ativo",{ascending:false}).order("nome")), q(sb.from("linhas_goto").select("*").order("qtd_ligacoes",{ascending:false})) ]);
+  $("#adm").innerHTML = `<div class="card tbl"><div class="row" style="justify-content:space-between"><div><h2>Integrantes do time</h2>
+    <p class="sub">O e-mail libera o acesso do SDR. Ramal, nome no GoTo ou user key ligam as ligações a ele (basta um).</p></div><button class="btn" id="tNovo">+ Adicionar SDR</button></div>
+    <table><thead><tr><th>Nome</th><th>E-mail</th><th>Ramal</th><th>Nome no GoTo</th><th>User key</th><th>Início</th><th>Cor</th><th>Ativo</th><th></th></tr></thead>
+    <tbody>${sdrs.map(s=>`<tr data-sid="${s.id}">
+      <td><input data-f="nome" value="${esc(s.nome)}"></td><td><input data-f="email" value="${esc(s.email)}" placeholder="email@lux…"></td>
+      <td><input data-f="ramal" value="${esc(s.ramal)}" style="width:70px"></td><td><input data-f="goto_nome" value="${esc(s.goto_nome)}"></td>
+      <td><input data-f="goto_user_key" value="${esc(s.goto_user_key)}" class="mono" style="font-size:11px"></td>
+      <td><input data-f="inicio" type="date" value="${s.inicio}"></td><td><input data-f="cor" type="color" value="${esc(s.cor)}" style="width:44px;padding:2px"></td>
+      <td><input data-f="ativo" type="checkbox" ${s.ativo?"checked":""} style="width:auto"></td>
+      <td><button class="btn peq" data-salvar="${s.id}">Salvar</button></td></tr>`).join("")}</tbody></table></div>
+    <div class="card tbl"><h2>Linhas do GoTo sem vínculo</h2><p class="sub">Ligações que chegaram do GoTo mas não bateram com nenhum SDR. Vincule para as próximas contarem.</p>
+    ${linhas.length?`<table><thead><tr><th>Nome</th><th>Ramal</th><th>User key</th><th class="n">Ligações</th><th>Vincular a</th><th></th></tr></thead><tbody>
+    ${linhas.map(l=>`<tr><td>${esc(l.nome)}</td><td class="mono">${esc(l.ramal)}</td><td class="mono" style="font-size:11px">${esc(l.goto_user_key)}</td><td class="n">${l.qtd_ligacoes}</td>
+      <td><select data-lk="${esc(l.chave)}"><option value="">—</option>${sdrs.filter(s=>s.ativo).map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join("")}<option value="__ignorar">Ignorar (não é SDR)</option></select></td>
+      <td><button class="btn peq" data-vinc="${esc(l.chave)}">Aplicar</button></td></tr>`).join("")}</tbody></table>`:`<p class="muted">Nenhuma linha pendente.</p>`}</div>`;
+  $("#tNovo").onclick = async ()=>{ const nome=prompt("Nome do SDR:"); if(!nome) return; await q(sb.from("sdrs").insert({nome})); await recarregarSdrs(); admTime(); };
+  document.querySelectorAll("[data-salvar]").forEach(b=>b.onclick=async()=>{
+    const tr=b.closest("tr"), row={};
+    tr.querySelectorAll("[data-f]").forEach(i=>{ row[i.dataset.f] = i.type==="checkbox" ? i.checked : (i.value.trim()||null); });
+    if(!row.nome) return toast("Nome obrigatório.");
+    await q(sb.from("sdrs").update(row).eq("id",b.dataset.salvar)); await recarregarSdrs(); toast("Salvo.");
+  });
+  document.querySelectorAll("[data-vinc]").forEach(b=>b.onclick=async()=>{
+    const chave=b.dataset.vinc, alvo=document.querySelector(`[data-lk="${CSS.escape(chave)}"]`).value, l=linhas.find(x=>x.chave===chave);
+    if(!alvo) return;
+    if(alvo!=="__ignorar"){ const s=sdrs.find(x=>x.id===alvo); const up={};
+      if(l.goto_user_key) up.goto_user_key=l.goto_user_key; else if(l.ramal) up.ramal=l.ramal; else up.goto_nome=l.nome;
+      await q(sb.from("sdrs").update(up).eq("id",s.id)); }
+    await q(sb.from("linhas_goto").delete().eq("chave",chave)); await recarregarSdrs();
+    toast(alvo==="__ignorar"?"Linha ignorada.":"Vinculado. Rode uma sincronização retroativa em Integração GoTo para puxar o histórico."); admTime();
+  });
+}
+async function recarregarSdrs(){ S.sdrs = await q(sb.from("sdrs").select("*").order("nome")); }
+
+async function admMetas(){
+  const metas = await q(sb.from("metas").select("*").order("vigente_desde",{ascending:false}));
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card"><h2>Nova meta semanal</h2>
+    <p class="sub">Vale a partir da data escolhida. Deixe o SDR em "Time todo" para a meta padrão, ou escolha um SDR para uma meta individual (ex.: rampa de novato).</p>
+    <div class="form"><label>Para<select id="mSdr"><option value="">Time todo (padrão)</option>${S.sdrs.filter(s=>s.ativo).map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join("")}</select></label>
+    <label>Vigente desde<input type="date" id="mDesde" value="${periodo("semana").ini}"></label>
+    <label>Ligações / semana<input type="number" id="mLig" value="250"></label><label>Conversas / semana<input type="number" id="mConv" value="40"></label>
+    <label>Reuniões / semana<input type="number" id="mReu" value="3"></label></div>
+    <button class="btn" id="mOk">Salvar meta</button></div>
+    <div class="card"><h2>Sugestão de rampa para novatos</h2><p class="legenda">Semanas 1–2: 60% da meta cheia · semanas 3–4: 80% · a partir da 5ª: meta cheia. Assim quem está começando disputa de verdade desde o início, sem ficar desanimado com a régua de quem já tem lista madura.</p></div></div>
+    <div class="card tbl"><h2>Histórico de metas</h2><table><thead><tr><th>Para</th><th>Desde</th><th class="n">Ligações</th><th class="n">Conversas</th><th class="n">Reuniões</th><th></th></tr></thead>
+    <tbody>${metas.map(m=>`<tr><td>${m.sdr_id?esc(nomeSdr(m.sdr_id)):"<b>Time todo</b>"}</td><td class="mono">${fmtDia(m.vigente_desde)}</td><td class="n">${m.ligacoes_semana}</td><td class="n">${m.conectadas_semana}</td><td class="n">${m.reunioes_semana}</td>
+    <td><a href="#" data-delm="${m.id}" class="muted" style="font-size:12px">excluir</a></td></tr>`).join("")}</tbody></table></div>`;
+  $("#mOk").onclick = async ()=>{ await q(sb.from("metas").insert({ sdr_id:$("#mSdr").value||null, vigente_desde:$("#mDesde").value, ligacoes_semana:+$("#mLig").value, conectadas_semana:+$("#mConv").value, reunioes_semana:+$("#mReu").value })); toast("Meta salva."); admMetas(); };
+  document.querySelectorAll("[data-delm]").forEach(a=>a.onclick=async e=>{ e.preventDefault(); if(!confirm("Excluir meta?")) return; await q(sb.from("metas").delete().eq("id",a.dataset.delm)); admMetas(); });
+}
+
+async function admTemporadas(){
+  const ts = await q(sb.from("temporadas").select("*").order("inicio",{ascending:false}));
+  const campos = (t={})=>`<div class="form">
+    <label>Nome<input data-t="nome" value="${esc(t.nome)}"></label><label>Início<input type="date" data-t="inicio" value="${t.inicio||""}"></label><label>Fim<input type="date" data-t="fim" value="${t.fim||""}"></label>
+    <label>Prêmio 1º lugar<input data-t="premio_1" value="${esc(t.premio_1)}" placeholder="ex.: Escape 60 para 2"></label><label>Prêmio 2º<input data-t="premio_2" value="${esc(t.premio_2)}" placeholder="ex.: almoço"></label><label>Prêmio 3º<input data-t="premio_3" value="${esc(t.premio_3)}"></label></div>
+    <label>Regras / observações (o time vê)<textarea data-t="regras">${esc(t.regras)}</textarea></label>`;
+  $("#adm").innerHTML = `<div class="card"><h2>Nova temporada</h2><p class="sub">Um período de disputa com prêmio no fim. Pode ser mensal, quinzenal ou um sprint.</p><div id="tNova">${campos()}</div><button class="btn" id="tCriar">Criar temporada</button></div>
+    ${ts.map(t=>`<div class="card" data-tid="${t.id}"><h2>${esc(t.nome)}</h2>${campos(t)}<div class="row"><button class="btn" data-tsalvar>Salvar</button><button class="btn sec" data-tfech>Ver resultado final</button><button class="btn perigo peq" data-tdel style="margin-left:auto">Excluir</button></div></div>`).join("")}`;
+  const ler = (el)=>{ const o={}; el.querySelectorAll("[data-t]").forEach(i=>o[i.dataset.t]=i.value.trim()||null); return o; };
+  $("#tCriar").onclick = async ()=>{ const o=ler($("#tNova")); if(!o.nome||!o.inicio||!o.fim) return toast("Nome, início e fim são obrigatórios."); await q(sb.from("temporadas").insert(o)); S.temporadas=await q(sb.from("temporadas").select("*").order("inicio",{ascending:false})); admTemporadas(); };
+  document.querySelectorAll("[data-tid]").forEach(c=>{ const id=c.dataset.tid;
+    $("[data-tsalvar]",c).onclick=async()=>{ await q(sb.from("temporadas").update(ler(c)).eq("id",id)); S.temporadas=await q(sb.from("temporadas").select("*").order("inicio",{ascending:false})); toast("Salvo."); };
+    $("[data-tdel]",c).onclick=async()=>{ if(!confirm("Excluir temporada?")) return; await q(sb.from("temporadas").delete().eq("id",id)); S.temporadas=await q(sb.from("temporadas").select("*").order("inicio",{ascending:false})); admTemporadas(); };
+    $("[data-tfech]",c).onclick=async()=>{ const t=ts.find(x=>x.id===id); const r=await rpc("ranking",{p_inicio:t.inicio,p_fim:t.fim});
+      modal(`<h2 style="margin-top:0">${esc(t.nome)} · resultado</h2><table>${r.map((x,i)=>`<tr><td class="mono">${i+1}º</td><td><b>${esc(x.nome)}</b></td><td class="n">${n(x.pontos)} pts</td><td>${esc([t.premio_1,t.premio_2,t.premio_3][i]||"")}</td></tr>`).join("")}</table><p class="legenda">Empate: ${esc(t.regras||"critério a definir")}</p>`); };
+  });
+}
+
+async function admRegras(){
+  const [regras, pars] = await Promise.all([ q(sb.from("regras_pontos").select("*").order("ordem")), q(sb.from("parametros").select("*").in("chave",["ligacao_min_s","conversa_min_s"])) ]);
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card tbl"><h2>Pontos por evento</h2><p class="sub">Mudanças valem para todo o histórico (o ranking é recalculado).</p>
+    <table><thead><tr><th>Evento</th><th class="n">Pontos</th><th>Ativa</th></tr></thead><tbody>
+    ${regras.map(r=>`<tr><td>${esc(r.descricao)}</td><td><input type="number" data-rp="${r.chave}" value="${r.pontos}" style="width:80px;text-align:right" class="mono"></td><td><input type="checkbox" data-ra="${r.chave}" ${r.ativa?"checked":""} style="width:auto"></td></tr>`).join("")}</tbody></table>
+    <button class="btn" id="rOk" style="margin-top:12px">Salvar pontos</button></div>
+    <div class="card"><h2>Critérios de contagem</h2>
+      ${pars.map(p=>`<label>${esc(p.descricao)}<input type="number" data-par="${p.chave}" value="${p.valor}"></label>`).join("")}
+      <button class="btn" id="pOk">Salvar critérios</button>
+      <p class="legenda" style="margin-top:14px"><b>Por que um mínimo?</b> Sem ele, ligação de 2 segundos (caixa postal, número errado) vira ponto e o incentivo passa a ser discar sem parar. Com o piso, ligar muito continua valendo, mas conversar vale 3×, e agendar vale 20×.</p></div></div>`;
+  $("#rOk").onclick = async ()=>{ for(const r of regras){ const p=+document.querySelector(`[data-rp="${r.chave}"]`).value, a=document.querySelector(`[data-ra="${r.chave}"]`).checked;
+      if(p!==r.pontos||a!==r.ativa) await q(sb.from("regras_pontos").update({pontos:p,ativa:a}).eq("chave",r.chave)); } toast("Pontuação atualizada."); };
+  $("#pOk").onclick = async ()=>{ for(const i of document.querySelectorAll("[data-par]")) await q(sb.from("parametros").update({valor:+i.value}).eq("chave",i.dataset.par)); toast("Critérios salvos."); };
+}
+
+async function admAjustes(){
+  const aj = await q(sb.from("ajustes_pontos").select("*").order("data",{ascending:false}).limit(50));
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card"><h2>Bônus ou ajuste manual</h2><p class="sub">Para reconhecer algo fora das regras (ajudou um colega, trouxe indicação) ou corrigir um erro. O time vê o motivo.</p>
+    <div class="form"><label>SDR<select id="aSdr">${S.sdrs.filter(s=>s.ativo).map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join("")}</select></label>
+    <label>Pontos (negativo para descontar)<input type="number" id="aPts" value="10"></label><label>Data<input type="date" id="aData" value="${iso(hojeSP())}"></label></div>
+    <label>Motivo<input id="aMot" placeholder="ex.: primeira fatura ACL na primeira semana"></label><button class="btn" id="aOk">Lançar</button></div>
+    <div class="card tbl"><h2>Lançamentos</h2><table>${aj.map(a=>`<tr><td class="mono">${fmtDia(a.data)}</td><td>${esc(nomeSdr(a.sdr_id))}</td><td>${esc(a.motivo)}</td><td class="n">${a.pontos>0?"+":""}${a.pontos}</td><td><a href="#" data-dela="${a.id}" class="muted" style="font-size:12px">excluir</a></td></tr>`).join("") || `<tr><td class="muted">Nenhum ajuste.</td></tr>`}</table></div></div>`;
+  $("#aOk").onclick = async ()=>{ const m=$("#aMot").value.trim(); if(!m) return toast("Informe o motivo."); await q(sb.from("ajustes_pontos").insert({sdr_id:$("#aSdr").value,pontos:+$("#aPts").value,data:$("#aData").value,motivo:m})); toast("Lançado."); admAjustes(); };
+  document.querySelectorAll("[data-dela]").forEach(a=>a.onclick=async e=>{ e.preventDefault(); await q(sb.from("ajustes_pontos").delete().eq("id",a.dataset.dela)); admAjustes(); });
+}
+
+async function admGoto(){
+  const [st, logs] = await Promise.all([ rpc("status_credenciais_goto"), q(sb.from("sync_log").select("*").order("id",{ascending:false}).limit(12)) ]);
+  const ok = (c)=> st.find(x=>x.campo===c)?.configurado;
+  const rotulo = {goto_client_id:"Client ID", goto_client_secret:"Client Secret", goto_pat:"Personal Access Token", goto_account_key:"Account Key"};
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card"><h2>Credenciais do GoTo Connect</h2>
+    <p class="sub">Ficam criptografadas no cofre do Supabase e nunca voltam para o navegador. Deixe em branco o que não quiser trocar.</p>
+    ${Object.entries(rotulo).map(([k,l])=>`<label>${l} ${ok(k)?`<span class="pill realizada">configurado</span>`:`<span class="pill no_show">faltando</span>`}<input id="g_${k}" type="password" autocomplete="off"></label>`).join("")}
+    <button class="btn" id="gSalvar">Salvar credenciais</button></div>
+    <div class="card"><h2>Sincronização</h2><p class="sub">Automática a cada 15 min, de segunda a sábado, das 7h às 20h.</p>
+      <div class="row"><button class="btn" id="gAgora">Sincronizar agora</button><select id="gDias" style="width:auto"><option value="7">últimos 7 dias</option><option value="14">últimos 14 dias</option><option value="31">últimos 31 dias</option></select><button class="btn sec" id="gRetro">Puxar histórico</button></div>
+      <div id="gRes" style="margin-top:12px"></div>
+      <div class="tbl"><table style="margin-top:8px"><thead><tr><th>Quando</th><th>Origem</th><th class="n">Achadas</th><th class="n">Gravadas</th><th class="n">Sem SDR</th><th>Erro</th></tr></thead>
+      <tbody>${logs.map(l=>`<tr><td class="mono">${fmtData(l.iniciado_em)}</td><td>${esc(l.origem)}</td><td class="n">${l.encontradas??"—"}</td><td class="n">${l.gravadas??"—"}</td><td class="n">${l.sem_sdr??"—"}</td><td style="color:var(--erro);font-size:12px">${esc(l.erro||"")}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Nenhuma sincronização ainda.</td></tr>`}</tbody></table></div></div></div>
+    <div class="card"><h2>Plano B · importar CSV do GoTo</h2><p class="sub">Se a API ainda não estiver liberada: exporte o relatório de chamadas (Analytics › Call history) e importe aqui.</p>
+      <input type="file" id="csvArq" accept=".csv,text/csv" style="width:auto"><div id="csvMap"></div></div>`;
+  $("#gSalvar").onclick = async ()=>{ const v=(k)=>$("#g_"+k).value.trim()||null;
+    await rpc("salvar_credenciais_goto",{p_client_id:v("goto_client_id"),p_client_secret:v("goto_client_secret"),p_pat:v("goto_pat"),p_account_key:v("goto_account_key")}); toast("Credenciais salvas."); admGoto(); };
+  const sync = async (body)=>{ $("#gRes").innerHTML=`<div class="aviso">Sincronizando… pode levar até 2 minutos.</div>`;
+    const { data, error } = await sb.functions.invoke("goto-sync",{ body });
+    let res = data; if(error){ try{ res = await error.context.json(); }catch{ res={erro:error.message}; } }
+    $("#gRes").innerHTML = res?.erro ? `<div class="aviso erro">${esc(res.erro)}${res.faltando?" · faltando: "+esc(res.faltando.join(", ")):""}</div>` : `<div class="aviso">${n(res.encontradas)} ligações no GoTo · ${n(res.gravadas)} gravadas · ${n(res.sem_sdr)} sem SDR vinculado.</div>`;
+    setTimeout(admGoto, 2500); };
+  $("#gAgora").onclick = ()=>sync({});
+  $("#gRetro").onclick = ()=>sync({dias:+$("#gDias").value});
+  $("#csvArq").onchange = (e)=>importarCsv(e.target.files[0]);
+}
+
+function parseCsv(txt){
+  const sep = (txt.split("\n")[0].match(/;/g)||[]).length > (txt.split("\n")[0].match(/,/g)||[]).length ? ";" : ",";
+  const rows=[]; let cur=[""], q=false;
+  for(let i=0;i<txt.length;i++){ const c=txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){cur[cur.length-1]+='"';i++;} else q=false; } else cur[cur.length-1]+=c; }
+    else if(c==='"') q=true; else if(c===sep) cur.push(""); else if(c==="\n"){ rows.push(cur); cur=[""]; } else if(c!=="\r") cur[cur.length-1]+=c; }
+  if(cur.length>1||cur[0]) rows.push(cur);
+  return rows;
+}
+function durSeg(v){ if(!v) return null; v=String(v).trim(); if(/^\d+$/.test(v)) return +v; const p=v.split(":").map(Number); if(p.some(isNaN)) return null; return p.reduce((a,x)=>a*60+x,0); }
+function dataCsv(v){ if(!v) return null; v=v.trim(); let m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m) return new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}T${m[4].padStart(2,"0")}:${m[5]}:${m[6]||"00"}-03:00`).toISOString();
+  const d=new Date(v); return isNaN(d)?null:d.toISOString(); }
+async function importarCsv(file){
+  if(!file) return; const rows=parseCsv(await file.text()); if(rows.length<2) return toast("CSV vazio.");
+  const cab=rows[0], campos=[["inicio","Data/hora da ligação"],["dono","Usuário / ramal do SDR"],["direcao","Direção (entrada/saída)"],["duracao","Duração total"],["conversa","Duração da conversa (opcional)"],["resultado","Resultado/atendida (opcional)"],["numero","Número externo (opcional)"]];
+  const palpite=(k)=>{ const re={inicio:/data|date|hora|time|start/i,dono:/usu|user|ramal|ext|agent|nome|name/i,direcao:/dire|direction|tipo/i,duracao:/dura|length/i,conversa:/talk|conversa|falad/i,resultado:/result|status|atend|answer/i,numero:/n[uú]mero|number|phone|telefone|destino|to/i}[k];
+    return cab.findIndex(c=>re.test(c)); };
+  $("#csvMap").innerHTML = `<p class="muted">${rows.length-1} linhas. Confira o mapeamento das colunas:</p><div class="form">${campos.map(([k,l])=>`<label>${l}<select data-cm="${k}"><option value="-1">—</option>${cab.map((c,i)=>`<option value="${i}" ${palpite(k)===i?"selected":""}>${esc(c)}</option>`).join("")}</select></label>`).join("")}</div>
+    <button class="btn" id="csvOk">Importar</button>`;
+  $("#csvOk").onclick = async ()=>{
+    const mp={}; document.querySelectorAll("[data-cm]").forEach(s=>mp[s.dataset.cm]=+s.value);
+    if(mp.inicio<0||mp.dono<0) return toast("Data/hora e usuário são obrigatórios.");
+    const g=(r,k)=> mp[k]>=0 ? r[mp[k]] : null;
+    const achaSdr=(v)=>{ v=String(v||"").trim().toLowerCase(); return S.sdrs.find(s=>[s.ramal,s.goto_nome,s.nome,s.email].filter(Boolean).some(x=>String(x).toLowerCase()===v || v.includes(String(x).toLowerCase())))?.id; };
+    const lote=[]; let sem=0;
+    for(const r of rows.slice(1)){ const ini=dataCsv(g(r,"inicio")); if(!ini) continue; const sdr=achaSdr(g(r,"dono")); if(!sdr){sem++;continue;}
+      const dir=String(g(r,"direcao")||"").toLowerCase(); const dt=durSeg(g(r,"duracao")); const conv=mp.conversa>=0?durSeg(g(r,"conversa")):null;
+      const res=String(g(r,"resultado")||"").toLowerCase();
+      const atendida = mp.resultado>=0 ? /atend|answer|complet|conect|connected/.test(res) && !/n[aã]o|no |missed|unanswer/.test(res) : (conv!=null ? conv>0 : null);
+      const id="csv-"+btoa(unescape(encodeURIComponent(ini+"|"+sdr+"|"+(g(r,"numero")||"")+"|"+dt))).replace(/[^a-z0-9]/gi,"").slice(0,60);
+      lote.push({ id, sdr_id:sdr, inicio:ini, direcao: /sa[ií]|out/.test(dir)?"OUTBOUND":/entr|in/.test(dir)?"INBOUND":"OUTBOUND", duracao_total_s:dt, duracao_conversa_s: conv ?? (atendida?dt:0), atendida, numero_externo:g(r,"numero"), origem:"csv" }); }
+    for(let i=0;i<lote.length;i+=500) await q(sb.from("ligacoes").upsert(lote.slice(i,i+500),{onConflict:"id"}));
+    toast(`${lote.length} ligações importadas${sem?` · ${sem} sem SDR identificado`:""}.`, 5000); $("#csvMap").innerHTML="";
+  };
+}
+
+async function admUsuarios(){
+  const us = await rpc("usuarios");
+  $("#adm").innerHTML = `<div class="card tbl"><h2>Acessos</h2><p class="sub">Quem criou conta. SDRs são liberados automaticamente quando o e-mail está cadastrado em Time.</p>
+    <table><thead><tr><th>E-mail</th><th>Papel</th><th>SDR vinculado</th><th></th></tr></thead><tbody>
+    ${us.map(u=>`<tr><td>${esc(u.email)}</td><td><select data-pap="${u.user_id}" ${u.user_id===S.user.id?"disabled":""}>${["gestor","sdr","pendente"].map(p=>`<option ${u.papel===p?"selected":""}>${p}</option>`).join("")}</select></td>
+      <td><select data-us="${u.user_id}"><option value="">—</option>${S.sdrs.map(s=>`<option value="${s.id}" ${u.sdr_id===s.id?"selected":""}>${esc(s.nome)}</option>`).join("")}</select></td>
+      <td><button class="btn peq" data-usok="${u.user_id}">Salvar</button></td></tr>`).join("")}</tbody></table></div>`;
+  document.querySelectorAll("[data-usok]").forEach(b=>b.onclick=async()=>{ const id=b.dataset.usok;
+    const up={ sdr_id: document.querySelector(`[data-us="${id}"]`).value||null }; const pap=document.querySelector(`[data-pap="${id}"]`); if(!pap.disabled) up.papel=pap.value;
+    await q(sb.from("perfis").update(up).eq("user_id",id)); toast("Salvo."); });
+}
+
+// visão do SDR: feedbacks compartilhados aparecem em "Meus números"
+const _telaMetricas = telaMetricas;
+telaMetricas = async function(){
+  await _telaMetricas();
+  if(gestor()) return;
+  const fbs = await q(sb.from("feedbacks").select("*").order("data",{ascending:false}).limit(20));
+  if(!fbs.length) return;
+  const c=document.createElement("div"); c.className="card";
+  c.innerHTML = `<h2>Feedbacks e combinados</h2><p class="sub">Do seu gestor.</p>${fbs.map(f=>`<div class="at ${f.tipo==="elogio"?"destaque":f.tipo==="ajuste"?"atencao":"pendencia"}"><span class="mono" style="font-size:10px;text-transform:uppercase">${fmtDia(f.data)} · ${f.tipo}${f.tipo==="combinado"&&f.concluido?" · concluído":""}</span><b style="font-weight:500">${esc(f.texto)}</b></div>`).join("")}`;
+  $("#conteudo").prepend(c);
+};
+
+iniciar();
+</script>
+</body>
+</html>
