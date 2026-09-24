@@ -23,7 +23,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 header{background:linear-gradient(90deg,var(--ciano),var(--azul) 45%,var(--indigo));color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em}
 header .eyebrow{font-family:var(--mono);font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.1em}
-header .user{margin-left:auto;font-size:12px;display:flex;gap:10px;align-items:center}
+header .sync{font-family:var(--mono);font-size:11px;opacity:.8;margin-left:auto;text-align:right;line-height:1.35}
+header .user{font-size:12px;display:flex;gap:10px;align-items:center}
 header .user button{background:rgba(255,255,255,.18);border:0;color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer}
 nav{display:flex;gap:4px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--linha);overflow-x:auto}
 nav button{background:none;border:0;padding:12px 14px;cursor:pointer;color:var(--tx2);font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
@@ -212,13 +213,35 @@ function render(){
   const abas = [["arena","Arena"],["reunioes","Reuniões"],["metricas", gestor()?"Métricas":"Meus números"]];
   if(gestor()) abas.push(["admin","Admin"]);
   $("#app").innerHTML = `<header><div><div class="eyebrow">Lux Energia · Time comercial</div><h1>Arena SDR</h1></div>
-    <div class="user"><span>${esc(S.perfil.nome||S.user.email)}${gestor()?" · gestor":""}</span><button id="sair">Sair</button></div></header>
+    <div class="sync" id="sync" title="Ligações lidas do GoTo de hora em hora, seg a sex, 8h às 19h"></div><div class="user"><span>${esc(S.perfil.nome||S.user.email)}${gestor()?" · gestor":""}</span><button id="sair">Sair</button></div></header>
     <nav>${abas.map(([k,l])=>`<button data-aba="${k}" class="${S.aba===k?"ativo":""}">${l}</button>`).join("")}</nav>
     <main id="conteudo"><p class="muted">Carregando…</p></main>`;
   $("#sair").onclick = ()=>sb.auth.signOut();
+  statusLeitura();
   document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ S.aba=b.dataset.aba; render(); });
   ({arena:telaArena, reunioes:telaReunioes, metricas:telaMetricas, admin:telaAdmin}[S.aba] || telaArena)();
 }
+
+
+// ===================== STATUS DA LEITURA =====================
+function proximaLeitura(){
+  // leitura automática: seg a sex, a cada hora, das 08:02 às 19:02
+  const d = hojeSP(); const dow = d.getDay(); const min = d.getHours()*60 + d.getMinutes();
+  const hhmm = (m)=>`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+  const util = dow>=1 && dow<=5;
+  if(util && min < 8*60+2) return `hoje ${hhmm(8*60+2)}`;
+  if(util && min < 19*60+2){ const h = min%60 < 2 ? Math.floor(min/60) : Math.floor(min/60)+1; return hhmm(h*60+2); }
+  const dias = ["dom","seg","ter","qua","qui","sex","sáb"];
+  let k=1, nd=(dow+1)%7; while(nd===0||nd===6){ k++; nd=(nd+1)%7; }
+  return `${k===1?"amanhã":dias[nd]} 08:02`;
+}
+async function statusLeitura(){
+  const el = $("#sync"); if(!el) return;
+  let ult=null; try{ const {data}=await sb.rpc("ultima_leitura"); ult=data; }catch{}
+  const quando = ult ? new Date(ult).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit", ...( (Date.now()-new Date(ult))>20*3600e3 ? {day:"2-digit",month:"2-digit"}:{} )}) : "—";
+  el.innerHTML = `atualizado ${esc(quando)}<br>próxima ${esc(proximaLeitura())}`;
+}
+setInterval(statusLeitura, 60000);
 
 // ===================== ARENA =====================
 async function telaArena(){
@@ -243,7 +266,7 @@ async function telaArena(){
           <div class="pts">${n(r.pontos)}<small>pts</small></div></div>`).join("") || `<p class="muted">Nenhum SDR ativo.</p>`}</div>
       </div>
       <div>
-        <div class="card"><h2>Metas da semana</h2><p class="sub">Progresso de segunda até hoje. Atualiza a cada 15 min com o GoTo.</p>
+        <div class="card"><h2>Metas da semana</h2><p class="sub">Progresso de segunda até hoje. Ligações atualizadas de hora em hora, das 8h às 19h.</p>
           ${painel.map(p=>`<div style="margin-bottom:14px"><b>${esc(p.nome)}</b>
             ${barraMeta("Ligações",p.lig_semana,p.meta_lig)}${barraMeta("Conversas",p.conv_semana,p.meta_conv)}${barraMeta("Reuniões",p.agend_semana,p.meta_reu)}
             <div class="chips"><span class="chip">mês: ${n(p.agend_mes)} reuniões</span><span class="chip">total: ${n(p.agend_total)} reuniões</span></div></div>`).join("")}
@@ -535,29 +558,16 @@ async function admAjustes(){
 }
 
 async function admGoto(){
-  const [st, logs] = await Promise.all([ rpc("status_credenciais_goto"), q(sb.from("sync_log").select("*").order("id",{ascending:false}).limit(12)) ]);
-  const ok = (c)=> st.find(x=>x.campo===c)?.configurado;
-  const rotulo = {goto_client_id:"Client ID", goto_client_secret:"Client Secret", goto_pat:"Personal Access Token", goto_account_key:"Account Key"};
-  $("#adm").innerHTML = `<div class="grid g2"><div class="card"><h2>Credenciais do GoTo Connect</h2>
-    <p class="sub">Ficam criptografadas no cofre do Supabase e nunca voltam para o navegador. Deixe em branco o que não quiser trocar.</p>
-    ${Object.entries(rotulo).map(([k,l])=>`<label>${l} ${ok(k)?`<span class="pill realizada">configurado</span>`:`<span class="pill no_show">faltando</span>`}<input id="g_${k}" type="password" autocomplete="off"></label>`).join("")}
-    <button class="btn" id="gSalvar">Salvar credenciais</button></div>
-    <div class="card"><h2>Sincronização</h2><p class="sub">Automática a cada 15 min, de segunda a sábado, das 7h às 20h.</p>
-      <div class="row"><button class="btn" id="gAgora">Sincronizar agora</button><select id="gDias" style="width:auto"><option value="7">últimos 7 dias</option><option value="14">últimos 14 dias</option><option value="31">últimos 31 dias</option></select><button class="btn sec" id="gRetro">Puxar histórico</button></div>
-      <div id="gRes" style="margin-top:12px"></div>
-      <div class="tbl"><table style="margin-top:8px"><thead><tr><th>Quando</th><th>Origem</th><th class="n">Achadas</th><th class="n">Gravadas</th><th class="n">Sem SDR</th><th>Erro</th></tr></thead>
-      <tbody>${logs.map(l=>`<tr><td class="mono">${fmtData(l.iniciado_em)}</td><td>${esc(l.origem)}</td><td class="n">${l.encontradas??"—"}</td><td class="n">${l.gravadas??"—"}</td><td class="n">${l.sem_sdr??"—"}</td><td style="color:var(--erro);font-size:12px">${esc(l.erro||"")}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Nenhuma sincronização ainda.</td></tr>`}</tbody></table></div></div></div>
-    <div class="card"><h2>Plano B · importar CSV do GoTo</h2><p class="sub">Se a API ainda não estiver liberada: exporte o relatório de chamadas (Analytics › Call history) e importe aqui.</p>
+  const logs = await q(sb.from("sync_log").select("*").order("id",{ascending:false}).limit(15));
+  const ult = logs[0];
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card"><h2>Leitura automática do GoTo</h2>
+    <p class="sub">De hora em hora (08:02 às 19:02), de segunda a sexta, uma tarefa agendada abre o GoTo Analytics no Chrome do gestor e grava as ligações dos ramais cadastrados em Time.</p>
+    ${ult?`<div class="aviso">Última leitura: <b>${fmtData(ult.iniciado_em)}</b> · ${n(ult.encontradas)} ligações lidas · ${n(ult.gravadas)} novas</div>`:`<div class="aviso">Nenhuma leitura ainda.</div>`}
+    <p class="legenda">Para funcionar, o computador precisa estar ligado, com o Chrome aberto e logado no GoTo. Se a última leitura passar de 1h15 em horário comercial, verifique isso primeiro.</p></div>
+    <div class="card tbl"><h2>Histórico de leituras</h2><table><thead><tr><th>Quando</th><th>Origem</th><th class="n">Lidas</th><th class="n">Novas</th><th>Erro</th></tr></thead>
+      <tbody>${logs.map(l=>`<tr><td class="mono">${fmtData(l.iniciado_em)}</td><td>${esc(l.origem)}</td><td class="n">${l.encontradas??"—"}</td><td class="n">${l.gravadas??"—"}</td><td style="color:var(--erro);font-size:12px">${esc(l.erro||"")}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nenhuma leitura ainda.</td></tr>`}</tbody></table></div></div>
+    <div class="card"><h2>Plano B · importar CSV do GoTo</h2><p class="sub">Se a leitura automática falhar num dia, exporte o relatório de chamadas do GoTo Analytics e importe aqui.</p>
       <input type="file" id="csvArq" accept=".csv,text/csv" style="width:auto"><div id="csvMap"></div></div>`;
-  $("#gSalvar").onclick = async ()=>{ const v=(k)=>$("#g_"+k).value.trim()||null;
-    await rpc("salvar_credenciais_goto",{p_client_id:v("goto_client_id"),p_client_secret:v("goto_client_secret"),p_pat:v("goto_pat"),p_account_key:v("goto_account_key")}); toast("Credenciais salvas."); admGoto(); };
-  const sync = async (body)=>{ $("#gRes").innerHTML=`<div class="aviso">Sincronizando… pode levar até 2 minutos.</div>`;
-    const { data, error } = await sb.functions.invoke("goto-sync",{ body });
-    let res = data; if(error){ try{ res = await error.context.json(); }catch{ res={erro:error.message}; } }
-    $("#gRes").innerHTML = res?.erro ? `<div class="aviso erro">${esc(res.erro)}${res.faltando?" · faltando: "+esc(res.faltando.join(", ")):""}</div>` : `<div class="aviso">${n(res.encontradas)} ligações no GoTo · ${n(res.gravadas)} gravadas · ${n(res.sem_sdr)} sem SDR vinculado.</div>`;
-    setTimeout(admGoto, 2500); };
-  $("#gAgora").onclick = ()=>sync({});
-  $("#gRetro").onclick = ()=>sync({dias:+$("#gDias").value});
   $("#csvArq").onchange = (e)=>importarCsv(e.target.files[0]);
 }
 
