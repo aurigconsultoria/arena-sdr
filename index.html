@@ -437,7 +437,7 @@ async function statusLeitura(){
   const el = $("#sync"); if(!el) return;
   let ult=null; try{ const {data}=await sb.rpc("ultima_leitura"); ult=data; }catch{}
   const quando = ult ? new Date(ult).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit", ...((Date.now()-new Date(ult))>20*3600e3?{day:"2-digit",month:"2-digit"}:{})}) : "—";
-  el.innerHTML = `<span class="txt">ligações atualizadas ${esc(quando)}<br>próxima ${esc(proximaLeitura())}</span><i class="live" title="Ligações lidas do GoTo de hora em hora, seg a sex, 8h às 19h"></i>`;
+  el.innerHTML = `<span class="txt">placar atualizado ${esc(quando)}<br>próxima ${esc(proximaLeitura())}</span><i class="live" title="Placar atualizado de hora em hora, seg a sex, 8h às 19h"></i>`;
 }
 setInterval(statusLeitura, 60000);
 
@@ -457,7 +457,7 @@ async function telaInicio(){
     </div></section>
     ${seletorPeriodo()}
     ${eu ? `<div class="kpis entra" style="--i:1;margin-bottom:16px">
-      <div class="kpi"><span>Minhas ligações hoje</span><b data-conta="${eu.lig_hoje}">0</b></div>
+      <div class="kpi"><span>Suas ligações hoje</span><b data-conta="${eu.lig_hoje}">0</b></div>
       <div class="kpi"><span>Ligações na semana</span><b data-conta="${eu.lig_semana}">0</b></div>
       <div class="kpi"><span>Reuniões na semana</span><b data-conta="${eu.agend_semana}">0</b></div>
       <div class="kpi"><span>Reuniões no mês</span><b data-conta="${eu.agend_mes}">0</b></div></div>`:""}
@@ -718,7 +718,7 @@ function grafico(serie, campo){
 
 // ================= ADMIN =================
 async function telaAdmin(){
-  const subs = [["coaching","Coaching"],["time","Time"],["metas","Metas"],["temporadas","Temporadas e prêmios"],["regras","Pontuação"],["ajustes","Bônus"],["goto","Leitura do GoTo"],["usuarios","Acessos"]];
+  const subs = [["coaching","Coaching"],["time","Time"],["metas","Metas"],["temporadas","Temporadas e prêmios"],["regras","Pontuação"],["ajustes","Bônus"],["goto","Atualização do placar"],["usuarios","Acessos"]];
   $("#conteudo").innerHTML = `<div class="subnav">${subs.map(([k,l])=>`<button data-sub="${k}" class="${S.subAdmin===k?"ativo":""}">${l}</button>`).join("")}</div><div id="adm"></div>`;
   $$(".subnav button").forEach(b=>b.onclick=()=>{ S.subAdmin=b.dataset.sub; telaAdmin(); });
   await ({coaching:admCoaching,time:admTime,metas:admMetas,temporadas:admTemporadas,regras:admRegras,ajustes:admAjustes,goto:admGoto,usuarios:admUsuarios}[S.subAdmin])();
@@ -730,7 +730,7 @@ async function admCoaching(){
   const rot = {sistema:"Sistema",pendencia:"Pendência sua",atencao:"Vale uma conversa",destaque:"Reconhecer"};
   $("#adm").innerHTML = `<div class="grid g2">
     <div class="card entra"><h2>Pontos de atenção</h2>
-      <p class="sub">Leitura semanal e agregada, nada de ligação por ligação. "Sem reunião" só aparece a partir da 2ª semana seguida sem marcar.</p>
+      <p class="sub">Visão da semana, sem olhar ligação por ligação. "Sem reunião" só aparece a partir da 2ª semana seguida sem marcar.</p>
       ${at.length ? at.map((a,i)=>`<div class="at ${a.nivel} entra" style="--i:${i}"><span class="quem">${rot[a.nivel]}${a.nome?" · "+esc(a.nome):""}</span><b>${esc(a.titulo)}</b><span>${esc(a.detalhe)}</span></div>`).join("")
         : `<div class="vazio"><b>Tudo em ordem</b>Nada pedindo atenção agora.</div>`}</div>
     <div class="card entra" style="--i:1"><h2>Recado rápido</h2><p class="sub">Publica no mural: para todo o time ou só para um SDR.</p>
@@ -824,12 +824,12 @@ async function admAjustes(){
 async function admGoto(){
   const logs = await q(sb.from("sync_log").select("*").order("id",{ascending:false}).limit(15));
   const ult = logs.find(l=>!l.erro);
-  $("#adm").innerHTML = `<div class="grid g2"><div class="card entra"><h2>Leitura automática do GoTo</h2>
-    <p class="sub">De hora em hora (08:02 às 19:02), de segunda a sexta, uma tarefa agendada abre o GoTo Analytics no Chrome do gestor e grava as ligações dos ramais cadastrados em Time.</p>
-    ${ult?`<div class="at destaque"><b>Última leitura: ${fmtData(ult.iniciado_em)}</b><span>${n(ult.encontradas)} ligações lidas · ${n(ult.gravadas)} novas</span></div>`:`<div class="at">Nenhuma leitura ainda.</div>`}
+  $("#adm").innerHTML = `<div class="grid g2"><div class="card entra"><h2>Atualização do placar</h2>
+    <p class="sub">De hora em hora (08:02 às 19:02), de segunda a sexta, o placar puxa do GoTo o total de ligações de cada um e soma os pontos.</p>
+    ${ult?`<div class="at destaque"><b>Última atualização: ${fmtData(ult.iniciado_em)}</b><span>${n(ult.gravadas)} ligações novas no placar</span></div>`:`<div class="at">Nenhuma atualização ainda.</div>`}
     <p class="legenda">Para funcionar: computador ligado, Chrome aberto e logado no GoTo. Se falhar, chega um e-mail de alerta.</p></div>
-    <div class="card tbl entra" style="--i:1"><h2>Histórico</h2><table><thead><tr><th>Quando</th><th class="n">Lidas</th><th class="n">Novas</th><th>Erro</th></tr></thead>
-      <tbody>${logs.map(l=>`<tr><td class="mono">${fmtData(l.iniciado_em)}</td><td class="n">${l.encontradas??"—"}</td><td class="n">${l.gravadas??"—"}</td><td style="color:var(--erro);font-size:12px">${esc(l.erro||"")}</td></tr>`).join("") || `<tr><td colspan="4" class="dim">Nenhuma leitura ainda.</td></tr>`}</tbody></table></div></div>`;
+    <div class="card tbl entra" style="--i:1"><h2>Histórico</h2><table><thead><tr><th>Quando</th><th class="n">Novas</th><th>Erro</th></tr></thead>
+      <tbody>${logs.map(l=>`<tr><td class="mono">${fmtData(l.iniciado_em)}</td><td class="n">${l.gravadas??"—"}</td><td style="color:var(--erro);font-size:12px">${esc(l.erro||"")}</td></tr>`).join("") || `<tr><td colspan="3" class="dim">Nenhuma atualização ainda.</td></tr>`}</tbody></table></div></div>`;
 }
 async function admUsuarios(){
   const us = await rpc("usuarios");
